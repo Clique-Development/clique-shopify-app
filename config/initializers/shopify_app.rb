@@ -1,8 +1,7 @@
 ShopifyApp.configure do |config|
   config.application_name = "My Shopify App"
   config.old_secret = ""
-  config.scope = "read_products" # Consult this page for more scope options:
-                                  # https://help.shopify.com/en/api/getting-started/authentication/oauth/scopes
+  config.scope = "read_products,read_orders,read_customers,read_inventory,read_fulfillments,write_products,write_inventory"
   config.embedded_app = true
   config.after_authenticate_job = false
   config.api_version = "2024-01"

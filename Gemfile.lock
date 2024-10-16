@@ -110,6 +110,9 @@ GEM
       dotenv (= 3.1.2)
       railties (>= 6.1)
     erubi (1.12.0)
+    eu_central_bank (1.7.0)
+      money (~> 6.13, >= 6.13.6)
+      nokogiri (~> 1.9)
     execjs (2.9.1)
     globalid (1.2.1)
       activesupport (>= 6.1)
@@ -135,6 +138,7 @@ GEM
       railties (>= 6.0.0)
     jwt (2.8.2)
       base64
+    logger (1.6.1)
     loofah (2.22.0)
       crass (~> 1.0.2)
       nokogiri (>= 1.12.0)
@@ -148,6 +152,17 @@ GEM
     method_source (1.1.0)
     mini_mime (1.1.5)
     minitest (5.23.1)
+    monetize (1.13.0)
+      money (~> 6.12)
+    money (6.19.0)
+      i18n (>= 0.6.4, <= 2)
+    money-open-exchange-rates (1.4.2)
+      money (~> 6.12)
+    money-rails (1.15.0)
+      activesupport (>= 3.0)
+      monetize (~> 1.9)
+      money (~> 6.13)
+      railties (>= 3.0)
     msgpack (1.7.2)
     multi_xml (0.7.1)
       bigdecimal (~> 3.1)
@@ -220,6 +235,8 @@ GEM
     redirect_safely (1.0.0)
       activemodel
     redis (4.8.1)
+    redis-client (0.22.2)
+      connection_pool
     regexp_parser (2.9.2)
     reline (0.5.7)
       io-console (~> 0.5)
@@ -252,6 +269,12 @@ GEM
       redirect_safely (~> 1.0)
       shopify_api (~> 13.4)
       sprockets-rails (>= 2.0.0)
+    sidekiq (7.3.2)
+      concurrent-ruby (< 2)
+      connection_pool (>= 2.3.0)
+      logger
+      rack (>= 2.2.4)
+      redis-client (>= 0.22.2)
     sorbet-runtime (0.5.11558)
     sprockets (4.2.1)
       concurrent-ruby (~> 1.0)
@@ -295,10 +318,13 @@ DEPENDENCIES
   capybara
   debug
   dotenv-rails
+  eu_central_bank
   httparty
   importmap-rails
   jbuilder
   jsbundling-rails
+  money-open-exchange-rates
+  money-rails
   openssl (~> 3.1.0)
   pry
   puma (~> 5.0)
@@ -307,6 +333,7 @@ DEPENDENCIES
   redis (~> 4.0)
   selenium-webdriver
   shopify_app (~> 21.2)
+  sidekiq
   sprockets-rails
   sqlite3 (~> 1.4)
   stimulus-rails

@@ -26,11 +26,20 @@ gem "stimulus-rails"
 
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
+
 gem 'react-rails'
+
 gem 'jsbundling-rails'
 
+gem 'money-rails'
+
+gem 'eu_central_bank'
+
+gem 'money-open-exchange-rates'
 # Use Redis adapter to run Action Cable in production
 gem "redis", "~> 4.0"
+
+gem "sidekiq"
 
 # Use Kredis to get higher-level data types in Redis [https://github.com/rails/kredis]
 # gem "kredis"

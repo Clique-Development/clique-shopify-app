@@ -15,7 +15,9 @@
     <% end %>
     <%= csrf_meta_tags %>
   </head>
-  <div id="app-root" data-orders-url="<%= orders_path %>"></div>
+  <div id="products-index" data-products-url="<%= root_path %>"></div>
+  <div id="orders-index" data-orders-url="<%= orders_path %>"></div>
+  <div id="settings-path" data-settings-url="<%= price_settings_path %>"></div>
 
   <body class="body-tag">
     <div class="app-wrapper">
