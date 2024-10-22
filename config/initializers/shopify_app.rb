@@ -9,6 +9,7 @@ ShopifyApp.configure do |config|
   config.log_level = :info
   config.reauth_on_access_scope_changes = true
   config.webhooks = [
+    { topic: "orders/create", path: "webhooks/orders_create" },
     { topic: "app/uninstalled", address: "webhooks/app_uninstalled"},
     { topic: "customers/data_request", address: "webhooks/customers_data_request" },
     { topic: "customers/redact", address: "webhooks/customers_redact"},

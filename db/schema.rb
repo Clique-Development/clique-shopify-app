@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_10_09_080115) do
+ActiveRecord::Schema[7.0].define(version: 2024_10_22_071853) do
   create_table "addresses", force: :cascade do |t|
     t.bigint "shopify_addr_id"
     t.bigint "shopify_customer_id"
@@ -194,6 +194,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_10_09_080115) do
     t.integer "product_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "stock_id"
     t.index ["product_id"], name: "index_variants_on_product_id"
   end
 

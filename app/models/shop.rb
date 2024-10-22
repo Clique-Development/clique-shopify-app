@@ -6,7 +6,7 @@ class Shop < ApplicationRecord
   has_many :variants, through: :products
   has_many :orders, dependent: :destroy
   has_many :customers, dependent: :destroy
-  after_create :create_webhooks
+  # after_create :create_webhooks
 
   def api_version
     ShopifyApp.configuration.api_version

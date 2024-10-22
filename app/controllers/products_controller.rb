@@ -48,7 +48,7 @@ class ProductsController < ApplicationController
     if fetched_products.present?
       parsed_products = JSON.parse(fetched_products)["pageItems"]
 
-      parsed_products.each do |product_data|
+      parsed_products.take(1).each do |product_data|
         category_tag = product_data["tags"].find { |tag| tag["name"] == "category" }
         brand_tag = product_data["tags"].find { |tag| tag["name"] == "brand" }
         subcategory_tag = product_data["tags"].find { |tag| tag["name"] == "subcategory" }
@@ -91,6 +91,7 @@ class ProductsController < ApplicationController
                        })
 
         product = Product.find_by(external_id: product_data["id"])
+
     #     product = Product.last
         shop = product.shop
         shop_domain = shop.shopify_domain
@@ -133,7 +134,8 @@ class ProductsController < ApplicationController
             inventoryQuantity: variant_data["availability"],
             weight: variant_data["modelWeight"],
             weightUnit: "KILOGRAMS",
-            barcode: variant_data["barcode"]
+            barcode: variant_data["barcode"],
+            stock_id: variant_data["id"]
           }
         end
 

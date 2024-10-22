@@ -151,22 +151,22 @@ class ShopifyProductService
   # end
   def add_variants(product_id, variant_params)
     query = <<~QUERY
-      mutation productVariantCreate($input: ProductVariantInput!) {
-        productVariantCreate(input: $input) {
-          productVariant {
+    mutation productVariantCreate($input: ProductVariantInput!) {
+      productVariantCreate(input: $input) {
+        productVariant {
+          id
+          title
+          inventoryItem {
             id
-            title
-            inventoryItem {
-              id
-            }
-          }
-          userErrors {
-            field
-            message
           }
         }
+        userErrors {
+          field
+          message
+        }
       }
-    QUERY
+    }
+  QUERY
 
     variant_params.each do |variant|
       variables = { "input": variant.merge(productId: product_id) }
@@ -175,7 +175,25 @@ class ShopifyProductService
         response = @client.query(query: query, variables: variables)
 
         if response.body["data"]["productVariantCreate"]["userErrors"].empty?
-          puts "Variant #{variant[:title]} created successfully with ID: #{response.body['data']['productVariantCreate']['productVariant']['id']}"
+          shopify_variant_id = response.body["data"]["productVariantCreate"]["productVariant"]["id"]
+          inventory_item_id = response.body["data"]["productVariantCreate"]["productVariant"]["inventoryItem"]["id"]
+
+          puts "Variant #{variant[:title]} created successfully with ID: #{shopify_variant_id}"
+
+          save_variant_to_db(
+            product_id: product_id,
+            shopify_variant_id: shopify_variant_id,
+            title: variant[:title],
+            sku: variant[:sku],
+            price: variant[:price],
+            barcode: variant[:barcode],
+            weight: variant[:weight],
+            weight_unit: variant[:weightUnit],
+            inventory_quantity: variant[:inventoryQuantity],
+            inventory_item_id: inventory_item_id,
+            stock_id: variant[:stock_id]
+          )
+
         else
           puts "Error creating variant: #{response.body['data']['productVariantCreate']['userErrors']}"
         end
@@ -216,5 +234,22 @@ class ShopifyProductService
     else
       puts "Error updating product price: #{response.body['data']['productVariantUpdate']['userErrors']}"
     end
+  end
+
+  def save_variant_to_db(product_id:, shopify_variant_id:, title:, sku:, price:, barcode:, weight:, weight_unit:, inventory_quantity:, inventory_item_id:, stock_id:)
+    Variant.create(
+      product_id: product_id,
+      shopify_variant_id: shopify_variant_id,
+      title: title,
+      sku: sku,
+      price: price,
+      barcode: barcode,
+      weight: weight,
+      weight_unit: weight_unit,
+      inventory_quantity: inventory_quantity,
+      inventory_item_id: inventory_item_id,
+      stock_id: stock_id,
+      shopify_product_id: product_id
+    )
   end
 end

@@ -97,6 +97,7 @@ class OrdersCreateJob < ActiveJob::Base
 
     if address.save
       logger.info("Address for order #{order_id} created successfully.")
+      return address
     else
       logger.error("Failed to create address: #{address.errors.full_messages.join(", ")}")
     end

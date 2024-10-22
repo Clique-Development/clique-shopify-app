@@ -1,4 +1,4 @@
-class ProductPriceUpdaterService
+class ProductPriceUpdateService
   def initialize(price_setting)
     @price_setting = price_setting
   end
