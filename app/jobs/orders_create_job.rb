@@ -57,6 +57,7 @@ class OrdersCreateJob < ActiveJob::Base
     }
 
     order = Order.new(order_attributes)
+    create_line_items(order, order_data['line_items'])
 
     if order.save
       logger.info("Order #{order.shopify_order_id} created successfully.")
@@ -65,6 +66,24 @@ class OrdersCreateJob < ActiveJob::Base
       send_order_to_rewix(order, address) if address
     else
       logger.error("Failed to create order: #{order.errors.full_messages.join(", ")}")
+    end
+  end
+
+  def create_line_items(order, line_items)
+    line_items.each do |line_item|
+      item = order.line_items.new(
+        shopify_id: line_item['id'],
+        name: line_item['name'],
+        title: line_item['title'],
+        price: line_item['price'],
+        shopify_product_id: line_item['product_id'],
+        shopify_variant_id: line_item['variant_id'],
+        quantity: line_item['quantity'],
+        sku: line_item['sku'],
+        variant_title: line_item['variant_title']
+      )
+      item.product = Product.find_by(shopify_product_id: line_item['product_id'])
+      item.variant = Variant.find_by(shopify_variant_id: line_item['variant_id'])
     end
   end
 
@@ -104,29 +123,31 @@ class OrdersCreateJob < ActiveJob::Base
   end
 
   def send_order_to_rewix(order, address)
-    rewix_order_data = {
-      key: order.shopify_order_id,
-      date: order.shopify_created_at.strftime("%Y/%m/%d %H:%M:%S %z"),
-      recipient: address.name,
-      careof: "",
-      street_name: address.address1,
-      address_number: address.address2,
-      zip: address.zip,
-      city: address.city,
-      province: address.province,
-      countrycode: address.country_code,
-      prefix: "",
-      number: address.phone,
-      stock_id: "",
-      quantity: 1, # Adjust based on the actual quantity required
-      autoConfirm: true
-    }
-    rewix_service = RewixOrderApiService.new('272000ec-9039-4c4e-a874-6dd5ea741b31', 'Cliqueadmin1')
+    order.line_items.each do |line_item|
+      rewix_order_data = {
+        key: order.shopify_order_id,
+        date: order.shopify_created_at.strftime("%Y/%m/%d %H:%M:%S %z"),
+        recipient: address.name,
+        careof: "",
+        street_name: address.address1,
+        address_number: address.address2,
+        zip: address.zip,
+        city: address.city,
+        province: address.province,
+        countrycode: address.country_code,
+        prefix: "",
+        number: address.phone,
+        stock_id: line_item.sku,
+        quantity: 1,
+        autoConfirm: true
+      }
+      rewix_service = RewixOrderApiService.new('272000ec-9039-4c4e-a874-6dd5ea741b31', 'Cliqueadmin1')
 
-    begin
-      rewix_service.create_dropshipping_order(rewix_order_data)
-    rescue => e
-      logger.error(e.message)
+      begin
+        rewix_service.create_dropshipping_order(rewix_order_data)
+      rescue => e
+        logger.error(e.message)
+      end
     end
   end
 end

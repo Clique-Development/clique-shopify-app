@@ -11,4 +11,8 @@ class Shop < ApplicationRecord
   def api_version
     ShopifyApp.configuration.api_version
   end
+
+  def retrieve_session
+    @session ||= ShopifyAPI::Auth::Session.new(shop: shopify_domain, access_token: shopify_token)
+  end
 end

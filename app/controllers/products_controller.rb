@@ -49,6 +49,7 @@ class ProductsController < ApplicationController
       parsed_products = JSON.parse(fetched_products)["pageItems"]
 
       parsed_products.take(1).each do |product_data|
+         
         category_tag = product_data["tags"].find { |tag| tag["name"] == "category" }
         brand_tag = product_data["tags"].find { |tag| tag["name"] == "brand" }
         subcategory_tag = product_data["tags"].find { |tag| tag["name"] == "subcategory" }
@@ -64,6 +65,9 @@ class ProductsController < ApplicationController
         unit_cost_including_weight_usd = cost_of_gram * cost_of_kg
         # unit_cost_including_weight_egp = cost_of_kg * egp_exchange_rate
         gross_margin = PriceSetting.last.gross_margin.to_f
+
+        final_price = (((((unit_cost_usd.to_f + unit_cost_including_weight_usd).round(2)) * egp_exchange_rate).round(2)) * 1.45).round(2)
+
         # final_price = unit_cost_including_weight_egp + (unit_cost_including_weight_egp * gross_margin)
         Product.upsert({
                          external_id: product_data["id"],
@@ -86,7 +90,7 @@ class ProductsController < ApplicationController
                          unit_cost_including_weight_usd: (unit_cost_usd.to_f + unit_cost_including_weight_usd).round(2),
                          unit_cost_including_weight_egp: (((unit_cost_usd.to_f + unit_cost_including_weight_usd).round(2)) * egp_exchange_rate).round(2),
                          gross_margin: gross_margin,
-                         final_price: (((((unit_cost_usd.to_f + unit_cost_including_weight_usd).round(2)) * egp_exchange_rate).round(2)) * 1.45).round(2),
+                         final_price: final_price,
                          shop_id: Shop.last.id
                        })
 
@@ -135,14 +139,20 @@ class ProductsController < ApplicationController
             weight: variant_data["modelWeight"],
             weightUnit: "KILOGRAMS",
             barcode: variant_data["barcode"],
-            stock_id: variant_data["id"]
+            stock_id: variant_data["id"],
+            model: variant_data['model'],
+            color: variant_data['color'],
+            size: variant_data['size'],
+            final_price: product.final_price
           }
         end
 
+         
 
-        product_id = service.create_product_with_variants_and_inventory(product_params, variant_params, media_params, inventory_params)
+        product_id = service.create_product_with_variants_and_inventory(product_params, variant_params, media_params, product)
         shopify_product_id = product_id.gsub(/\D/, '')
         product.update(shopify_product_id: shopify_product_id)
+         
         #
         # product_data["models"].each do |variant_data|
         #   Variant.upsert(

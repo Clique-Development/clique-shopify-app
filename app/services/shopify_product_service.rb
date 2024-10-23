@@ -9,13 +9,14 @@ class ShopifyProductService
     )
   end
 
-  def create_product_with_variants_and_inventory(product_params, variant_params, media_params, inventory_params)
-    product_id_info = create_product(product_params)
+  def create_product_with_variants_and_inventory(product_params, variant_params, media_params, product)
+    product_id_info = create_product(product_params, variant_params, product)
+
     return unless product_id_info
 
     add_product_media(product_id_info[:product_id], media_params)
 
-    add_variants(product_id_info[:product_id], variant_params) if variant_params.any?
+    # add_variants(product_id_info[:product_id], variant_params) if variant_params.any?
 
     # Step 4: Update inventory levels
     # update_product_quantity(product_id_info, inventory_params)
@@ -48,21 +49,34 @@ class ShopifyProductService
   end
 
   # Create the product
-  def create_product(product_params)
-    query = <<~QUERY
-      mutation createProduct($input: ProductInput!) {
+  def create_product(product_params, variant_params, product)
+    query = <<~GRAPHQL
+      mutation CreateProductWithOptions($input: ProductInput!) {
         productCreate(input: $input) {
           product {
             id
             title
-            variants(first: 10) {
-              edges {
-                node {
-                  id
-                  inventoryItem {
-                    id
-                  }
+            bodyHtml
+            vendor
+            productType
+            options {
+              name
+              values
+              id
+              position
+            }
+            variants(first: 5) {
+              nodes {
+                id
+                title
+                selectedOptions {
+                  name
+                  value
                 }
+                price
+                sku
+                weight
+                weightUnit
               }
             }
           }
@@ -72,18 +86,58 @@ class ShopifyProductService
           }
         }
       }
-    QUERY
+    GRAPHQL
 
-    variables = { "input": product_params }
+    options = %w[Model Color Size]
+    variants = variant_params.map do |variant|
+      {
+        title: variant[:title],
+        sku: variant[:stock_id].to_s,
+        price: variant[:final_price],
+        weight: variant[:weight],
+        weightUnit: variant[:weightUnit],
+        requiresShipping: true,
+        options: [variant[:model], variant[:color], variant[:size]]
+      }
+    end
+
+     
+
+    variables = {
+      "input": {
+        "title": product_params[:title],
+        "bodyHtml": product_params[:bodyHtml],
+        "vendor": product_params[:vendor],
+        "productType": product_params[:productType],
+        "options": options,
+        "variants": variants
+      }
+    }
+
+     
 
     response = @client.query(query: query, variables: variables)
 
     if response.body["data"]["productCreate"]["userErrors"].empty?
       product_data = response.body["data"]["productCreate"]["product"]
-      {
-        product_id: product_data["id"],
-        variant_inventory_items: product_data["variants"]["edges"].map { |edge| edge["node"]["inventoryItem"]["id"] }
-      }
+
+      variants_data = response.body.dig('data', 'productCreate', 'product', 'variants', 'nodes')
+      return nil unless variants_data
+
+      variants_data.each do |variant|
+        save_variant_to_db(
+          product_id: 1,
+          shopify_product_id: product_data['id']&.gsub(/\D/, ''),
+          shopify_variant_id: variant['id']&.gsub(/\D/, ''),
+          title: variant['title'],
+          sku: variant['sku'],
+          price: variant['price'],
+          weight: variant['weight'],
+          weight_unit: variant['weightUnit']
+        )
+      end
+
+      { product_id: product_data['id'] }
     else
       puts "Error creating product: #{response.body["data"]["productCreate"]["userErrors"]}"
       nil
@@ -151,22 +205,22 @@ class ShopifyProductService
   # end
   def add_variants(product_id, variant_params)
     query = <<~QUERY
-    mutation productVariantCreate($input: ProductVariantInput!) {
-      productVariantCreate(input: $input) {
-        productVariant {
-          id
-          title
-          inventoryItem {
+      mutation productVariantCreate($input: ProductVariantInput!) {
+        productVariantCreate(input: $input) {
+          productVariant {
             id
+            title
+            inventoryItem {
+              id
+            }
+          }
+          userErrors {
+            field
+            message
           }
         }
-        userErrors {
-          field
-          message
-        }
       }
-    }
-  QUERY
+    QUERY
 
     variant_params.each do |variant|
       variables = { "input": variant.merge(productId: product_id) }
@@ -180,19 +234,19 @@ class ShopifyProductService
 
           puts "Variant #{variant[:title]} created successfully with ID: #{shopify_variant_id}"
 
-          save_variant_to_db(
-            product_id: product_id,
-            shopify_variant_id: shopify_variant_id,
-            title: variant[:title],
-            sku: variant[:sku],
-            price: variant[:price],
-            barcode: variant[:barcode],
-            weight: variant[:weight],
-            weight_unit: variant[:weightUnit],
-            inventory_quantity: variant[:inventoryQuantity],
-            inventory_item_id: inventory_item_id,
-            stock_id: variant[:stock_id]
-          )
+          # save_variant_to_db(
+          #   product_id: product_id,
+          #   shopify_variant_id: shopify_variant_id,
+          #   title: variant[:title],
+          #   sku: variant[:sku],
+          #   price: variant[:price],
+          #   barcode: variant[:barcode],
+          #   weight: variant[:weight],
+          #   weight_unit: variant[:weightUnit],
+          #   inventory_quantity: variant[:inventoryQuantity],
+          #   inventory_item_id: inventory_item_id,
+          #   stock_id: variant[:stock_id]
+          # )
 
         else
           puts "Error creating variant: #{response.body['data']['productVariantCreate']['userErrors']}"
@@ -236,20 +290,17 @@ class ShopifyProductService
     end
   end
 
-  def save_variant_to_db(product_id:, shopify_variant_id:, title:, sku:, price:, barcode:, weight:, weight_unit:, inventory_quantity:, inventory_item_id:, stock_id:)
+  def save_variant_to_db(product_id:, shopify_product_id:, shopify_variant_id:, title:, sku:, price:, weight:, weight_unit:)
     Variant.create(
       product_id: product_id,
+      shopify_product_id: shopify_product_id,
       shopify_variant_id: shopify_variant_id,
       title: title,
       sku: sku,
       price: price,
-      barcode: barcode,
       weight: weight,
-      weight_unit: weight_unit,
-      inventory_quantity: inventory_quantity,
-      inventory_item_id: inventory_item_id,
-      stock_id: stock_id,
-      shopify_product_id: product_id
+      weight_unit: weight_unit
     )
   end
+
 end

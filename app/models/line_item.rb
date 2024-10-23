@@ -1,5 +1,5 @@
 class LineItem < ApplicationRecord
   belongs_to :order
-  belongs_to :product
-  belongs_to :variant
+  belongs_to :product, optional: true
+  belongs_to :variant, optional: true
 end
