@@ -22,6 +22,34 @@ class ProductsController < ApplicationController
     }
   end
 
+  def fetch_orders_from_api
+    page = params[:page].to_i > 0 ? params[:page].to_i : 1
+    per_page = PER_PAGE
+
+    total_orders = Order.count
+    orders = Order.includes(:customer).order(:created_at).offset((page - 1) * per_page).limit(per_page)
+
+    total_pages = (total_orders / per_page.to_f).ceil
+
+    final_orders = orders.map do |order|
+      {
+        id: order.id,
+        name: order.name,
+        shopify_created_at: order.shopify_created_at&.strftime("%Y-%m-%d %H:%M"),
+        customer: (order.customer.present? ? "#{order.customer.first_name} #{order.customer.last_name}" : nil),
+        cost_of_dropshipping: order.cost_of_dropshipping,
+        total_price: order.total_price,
+        financial_status: order.financial_status&.capitalize
+      }
+    end
+
+    render json: {
+      orders: final_orders,
+      current_page: page,
+      total_pages: total_pages
+    }
+  end
+
   def products_data_summary
     suppliers_count = Product.distinct.count(:dropship_supplier)
     brands_count = Product.distinct.count(:vendor)
@@ -49,7 +77,7 @@ class ProductsController < ApplicationController
       parsed_products = JSON.parse(fetched_products)["pageItems"]
 
       parsed_products.take(1).each do |product_data|
-         
+
         category_tag = product_data["tags"].find { |tag| tag["name"] == "category" }
         brand_tag = product_data["tags"].find { |tag| tag["name"] == "brand" }
         subcategory_tag = product_data["tags"].find { |tag| tag["name"] == "subcategory" }
@@ -85,7 +113,7 @@ class ProductsController < ApplicationController
                          unit_cost_usd: unit_cost_usd.to_f,
                          unit_cost_egp: unit_cost_egp.round(2),
                          cost_of_kg: cost_of_kg,
-                         cost_of_gram: cost_of_kg/1000,
+                         cost_of_gram: cost_of_kg / 1000,
                          unit_weight_gr: product_data["weight"],
                          unit_cost_including_weight_usd: (unit_cost_usd.to_f + unit_cost_including_weight_usd).round(2),
                          unit_cost_including_weight_egp: (((unit_cost_usd.to_f + unit_cost_including_weight_usd).round(2)) * egp_exchange_rate).round(2),
@@ -96,7 +124,7 @@ class ProductsController < ApplicationController
 
         product = Product.find_by(external_id: product_data["id"])
 
-    #     product = Product.last
+        #     product = Product.last
         shop = product.shop
         shop_domain = shop.shopify_domain
         access_token = shop.shopify_token
@@ -147,32 +175,12 @@ class ProductsController < ApplicationController
           }
         end
 
-         
-
         product_id = service.create_product_with_variants_and_inventory(product_params, variant_params, media_params, product)
         shopify_product_id = product_id.gsub(/\D/, '')
         product.update(shopify_product_id: shopify_product_id)
-         
-        #
-        # product_data["models"].each do |variant_data|
-        #   Variant.upsert(
-        #     {
-        #       shopify_product_id: shopify_product_id,
-        #       price: variant_data["streetPrice"],
-        #       sku: variant_data["code"],
-        #       title: "#{variant_data['model']} - #{variant_data['color']} - #{variant_data['size']}",
-        #       inventory_quantity: variant_data["availability"],
-        #       weight: variant_data["modelWeight"],
-        #       taxable: variant_data["taxable"] > 0,
-        #       barcode: variant_data["barcode"],
-        #       product: product
-        #     }
-        #   )
-        # end
 
         puts "Product created with ID: #{product_id}" if product_id
       end
-
 
     else
       render json: { error: "Failed to fetch products" }, status: :unprocessable_entity

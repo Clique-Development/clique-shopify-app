@@ -16,4 +16,13 @@ class Api::PriceSettingsController < ActionController::API
 
     render json: { finalPrice: final_black_market_price }, status: :ok
   end
+
+  def get_currency_settings
+    price_setting = PriceSetting.last
+    if price_setting
+      render json: price_setting.slice(:cost_of_kg, :gross_margin, :black_market_egp_markup, :final_black_market_price)
+    else
+      render json: { error: "No PriceSetting found" }, status: :not_found
+    end
+  end
 end

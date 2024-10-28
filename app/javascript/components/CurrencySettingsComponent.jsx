@@ -8,10 +8,32 @@ const CurrencySettingsComponent = () => {
     const [blackmarket, setBlackmarket] = useState('');
     const [finalBlackmarket, setFinalBlackmarket] = useState('');
 
-    // Function to handle backend request
+    // Fetch initial values on component mount
+    useEffect(() => {
+        const fetchInitialValues = async () => {
+            try {
+                const response = await fetch('/get_currency_settings'); // Update the URL as needed
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const data = await response.json();
+                setCostOfKg(data.cost_of_kg);
+                setGrossMargin(data.gross_margin);
+                setBlackmarket(data.black_market_egp_markup);
+                setFinalBlackmarket(data.final_black_market_price);
+            } catch (error) {
+                console.error('Error fetching initial values:', error);
+            }
+        };
+
+        fetchInitialValues();
+    }, []);
+
+    // Function to handle backend request for final blackmarket price calculation
     const calculateFinalBlackmarket = async () => {
         try {
-
             const response = await fetch('/calculate_final_black_market_price', {
                 method: 'POST',
                 headers: {
@@ -29,7 +51,6 @@ const CurrencySettingsComponent = () => {
             }
 
             const data = await response.json();
-            // Assuming the response contains { finalPrice: calculatedPrice }
             setFinalBlackmarket(data.finalPrice);
         } catch (error) {
             console.error('Error calculating final price:', error);

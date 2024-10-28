@@ -1,26 +1,34 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import './index.css'
 import {
-    TextField,
+    Page,
+    Card,
     IndexTable,
-    LegacyCard,
+    ChoiceList,
+    TextField,
+    Badge,
     IndexFilters,
+    LegacyCard,
     useSetIndexFiltersMode,
     useIndexResourceState,
+    Avatar,
+    TextContainer,
     Text,
-    ChoiceList,
-    RangeSlider,
-    Badge,
     Box,
-    Card,
-    LegacyStack, Divider,
+    LegacyStack,
+    RangeSlider,
+    Divider,
+    Icon
 } from '@shopify/polaris';
-import React, { useState, useCallback } from 'react';
+import {ChevronLeftIcon, ChevronRightIcon} from "@shopify/polaris-icons";
+import axios from "axios";
 import './IndexTableComponent.css'
 
 function OrderIndexTableComponent() {
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     const [itemStrings, setItemStrings] = useState([
         'All',
-        'paid',
+        'Paid',
         'Partially Paid',
         'Due',
     ]);
@@ -210,47 +218,58 @@ function OrderIndexTableComponent() {
         });
     }
 
-    const orders = [
-        {
-            id: '1020',
-            order: <Text as="span" variant="bodyMd" fontWeight="semibold">#1020</Text>,
-            date: 'Jul 20 at 4:34pm',
-            customer: 'Jaydon Stanton',
-            total: '$969.44',
-            paymentStatus: <Badge progress="complete">Paid</Badge>,
-        },
-        {
-            id: '1019',
-            order: <Text as="span" variant="bodyMd" fontWeight="semibold">#1019</Text>,
-            date: 'Jul 20 at 3:46pm',
-            customer: 'Ruben Westerfelt',
-            total: '$701.19',
-            paymentStatus: <Badge progress="partiallyComplete">Partially paid</Badge>,
-        },
-        {
-            id: '1018',
-            order: <Text as="span" variant="bodyMd" fontWeight="semibold">#1018</Text>,
-            date: 'Jul 20 at 3:44pm',
-            customer: 'Leo Carder',
-            total: '$798.24',
-            paymentStatus: <Badge progress="incomplete">Due</Badge>,
-        },
-    ];
+
+    const [orders, setOrders] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+
+    const { selectedResources, allResourcesSelected, handleSelectionChange } = useIndexResourceState(orders);
 
     const resourceName = {
         singular: 'order',
         plural: 'orders',
     };
 
-    const { selectedResources, allResourcesSelected, handleSelectionChange } = useIndexResourceState(orders);
+    const fetchOrders = async (page = 1) => {
+        try {
+            const response = await axios.get('/rewix_orders', {
+                params: { page }
+            });
 
-    const rowMarkup = orders.map(({ id, order, date, customer, total, paymentStatus }, index) => (
+            setOrders(response.data.orders);
+            setCurrentPage(response.data.current_page);
+            setTotalPages(response.data.total_pages);
+        } catch (error) {
+            console.error('Error fetching orders:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchOrders(currentPage);
+    }, [currentPage]);
+
+    const handlePrevPage = () => {
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+        }
+    };
+
+    const handleNextPage = () => {
+        if (currentPage < totalPages) {
+            setCurrentPage(currentPage + 1);
+        }
+    };
+
+    console.log(orders)
+
+    const rowMarkup = orders.map(({ id, name, shopify_created_at, customer, cost_of_dropshipping, total_price, financial_status }, index) => (
         <IndexTable.Row id={id} key={id} selected={selectedResources.includes(id)} position={index}>
-            <IndexTable.Cell>{order}</IndexTable.Cell>
-            <IndexTable.Cell>{date}</IndexTable.Cell>
+            <IndexTable.Cell>{name}</IndexTable.Cell>
+            <IndexTable.Cell>{shopify_created_at}</IndexTable.Cell>
             <IndexTable.Cell>{customer}</IndexTable.Cell>
-            <IndexTable.Cell>{total}</IndexTable.Cell>
-            <IndexTable.Cell>{paymentStatus}</IndexTable.Cell>
+            <IndexTable.Cell>{cost_of_dropshipping}</IndexTable.Cell>
+            <IndexTable.Cell>{total_price}</IndexTable.Cell>
+            <IndexTable.Cell>{financial_status}</IndexTable.Cell>
         </IndexTable.Row>
     ));
 
@@ -317,12 +336,38 @@ function OrderIndexTableComponent() {
                         { title: 'Order' },
                         { title: 'Date' },
                         { title: 'Customer' },
+                        { title: 'Cost of Dropshipping Carrier (EUR)' },
                         { title: 'Total' },
                         { title: 'Payment status' },
                     ]}
                 >
                     {rowMarkup}
                 </IndexTable>
+
+                {/* Pagination controls */}
+                <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                        onClick={handlePrevPage}
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
+                        disabled={currentPage === 1}
+                    >
+                        <Icon source={ChevronLeftIcon} color="base" />
+                    </button>
+
+                    <button
+                        onClick={handleNextPage}
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
+                        disabled={currentPage === totalPages}
+                    >
+                        <Icon source={ChevronRightIcon} color="base" />
+                    </button>
+                </div>
+
+                <div style={{ marginTop: '10px', textAlign: 'right' }}>
+                    Page {currentPage} of {totalPages}
+                </div>
+
+
             </LegacyCard>
         </div>
     );

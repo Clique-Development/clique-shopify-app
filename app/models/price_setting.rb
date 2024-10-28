@@ -5,7 +5,7 @@ class PriceSetting < ApplicationRecord
   private
 
   def update_product_prices
-    ProductPriceUpdateService.new(self).perform
+    # ProductPriceUpdateService.new(self).perform
   end
 
   def price_present?

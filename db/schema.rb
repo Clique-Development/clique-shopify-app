@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_10_22_071853) do
+ActiveRecord::Schema[7.0].define(version: 2024_10_25_123219) do
   create_table "addresses", force: :cascade do |t|
     t.bigint "shopify_addr_id"
     t.bigint "shopify_customer_id"
@@ -89,7 +89,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_10_22_071853) do
   end
 
   create_table "orders", force: :cascade do |t|
-    t.bigint "shopify_order_id"
+    t.integer "shopify_order_id"
     t.integer "order_number"
     t.string "name"
     t.string "email"
@@ -116,6 +116,10 @@ ActiveRecord::Schema[7.0].define(version: 2024_10_22_071853) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "shop_id"
+    t.integer "customer_id"
+    t.string "financial_status"
+    t.float "cost_of_dropshipping"
+    t.index ["customer_id"], name: "index_orders_on_customer_id"
     t.index ["shop_id"], name: "index_orders_on_shop_id"
   end
 
@@ -198,4 +202,5 @@ ActiveRecord::Schema[7.0].define(version: 2024_10_22_071853) do
     t.index ["product_id"], name: "index_variants_on_product_id"
   end
 
+  add_foreign_key "orders", "customers"
 end

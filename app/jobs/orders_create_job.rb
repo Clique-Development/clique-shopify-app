@@ -45,6 +45,8 @@ class OrdersCreateJob < ActiveJob::Base
       current_total_tax: order_data["total_tax"].to_f,
       total_discounts: order_data["total_discounts"].to_f,
       fulfillment_status: order_data["fulfillment_status"],
+      financial_status: order_data["financial_status"],
+      cost_of_dropshipping: 9.8,
       phone: order_data["phone"],
       tags: order_data["tags"],
       token: order_data["token"],
@@ -58,9 +60,11 @@ class OrdersCreateJob < ActiveJob::Base
 
     order = Order.new(order_attributes)
     create_line_items(order, order_data['line_items'])
+    create_customer(order, order_data['customer'])
 
     if order.save
       logger.info("Order #{order.shopify_order_id} created successfully.")
+      update_shipping_address(order.shopify_order_id, shop)
 
       address = save_address(order.id)
       send_order_to_rewix(order, address) if address
@@ -84,6 +88,29 @@ class OrdersCreateJob < ActiveJob::Base
       )
       item.product = Product.find_by(shopify_product_id: line_item['product_id'])
       item.variant = Variant.find_by(shopify_variant_id: line_item['variant_id'])
+    end
+  end
+
+  def create_customer(order, customer_data)
+    return unless customer_data
+
+    customer_id = customer_data['id']
+    existing_customer = Customer.find_by(shopify_customer_id: customer_id)
+    if existing_customer
+      order.customer_id = existing_customer.id
+    else
+      customer = Customer.create(
+        shopify_customer_id: customer_id,
+        first_name: customer_data['first_name'],
+        last_name: customer_data['last_name'],
+        email: customer_data['email'],
+        phone: customer_data['phone'],
+        state: customer_data['state'],
+        currency: customer_data['currency'],
+        shopify_created_at: customer_data['created_at'],
+        shopify_updated_at: customer_data['updated_at']
+      )
+      order.customer_id = customer.id
     end
   end
 
@@ -149,5 +176,46 @@ class OrdersCreateJob < ActiveJob::Base
         logger.error(e.message)
       end
     end
+  end
+
+  def update_shipping_address(order_id, shop)
+    shipping_address_mutation = <<-'GRAPHQL'
+     mutation($orderId: ID!, $shippingAddress: MailingAddressInput!) {
+       orderUpdate(input: { id: $orderId, shippingAddress: $shippingAddress }) {
+         order {
+           id
+           shippingAddress {
+             address1
+             city
+             province
+             zip
+             country
+           }
+         }
+         userErrors {
+           field
+           message
+         }
+       }
+     }
+    GRAPHQL
+    variables = {
+      orderId: "gid://shopify/Order/#{order_id}",
+      shippingAddress: {
+        address1: "EuroLanes, via del Gaggiolo, 38",
+        address2: "CAI 815724",
+        city: "Arcene",
+        province: "Bergamo",
+        provinceCode: "BG",
+        zip: "24040",
+        country: "Italy",
+        countryCode: "IT",
+        firstName: "Aly",
+        lastName: "Dabbous",
+        phone: "0039 035 418 5292"
+      }
+    }
+    client = ShopifyAPI::Clients::Graphql::Admin.new(session: shop.retrieve_session)
+    client.query(query: shipping_address_mutation, variables: variables)
   end
 end
