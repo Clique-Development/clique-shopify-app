@@ -7,4 +7,18 @@ class Order < ApplicationRecord
 
   belongs_to :customer, optional: true
   belongs_to :shop
+
+  scope :paid, -> { where(financial_status: 'paid') }
+
+  def self.paid_and_due_amounts
+    session = Shop.last.retrieve_session
+    paid_amount = 0
+    total_amount = 0
+    all.each do |order|
+      transactions = ShopifyAPI::Transaction.all(order_id: order.shopify_order_id, session: session)
+      paid_amount += transactions.sum { |transaction| transaction.amount.to_f if transaction.status == 'success' }
+      total_amount += order.total_price
+    end
+    [paid_amount, total_amount - paid_amount]
+  end
 end

@@ -5,6 +5,7 @@ Rails.application.routes.draw do
   get '/rewix_products', :to => 'products#fetch_products_from_api'
   get '/rewix_orders', :to => 'products#fetch_orders_from_api'
   get '/products_data_summary', :to => 'products#products_data_summary'
+  get '/orders_data_summary', :to => 'products#orders_data_summary'
   get '/price_settings', :to => 'price_settings#index'
   post '/calculate_final_black_market_price', to: 'api/price_settings#calculate_final_black_market_price'
   get '/get_currency_settings', to: 'api/price_settings#get_currency_settings'

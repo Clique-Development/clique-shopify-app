@@ -32,6 +32,35 @@ function OrderIndexTableComponent() {
         'Partially Paid',
         'Due',
     ]);
+    const [summaryData, setSummaryData] = useState({
+        orders: 0,
+        paid_orders: 0,
+        paid_amount: 0,
+        due_amount: 0,
+    });
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const response = await axios.get('/orders_data_summary');
+                const data = response.data;
+
+                setSummaryData({
+                    orders: data.orders,
+                    paid_orders: data.paid_orders,
+                    paid_amount: data.paid_amount,
+                    due_amount: data.due_amount
+                });
+            } catch (error) {
+                console.error('Failed to fetch summary data', error);
+            }
+        };
+
+        fetchData(); // Fetch initial data
+        const intervalId = setInterval(fetchData, 60000); // Polling every 60 seconds
+
+        return () => clearInterval(intervalId); // Clean up the interval on unmount
+    }, []);
+
     const [selected, setSelected] = useState(0);
 
     const deleteView = (index) => {
@@ -285,19 +314,19 @@ function OrderIndexTableComponent() {
                     <LegacyStack distribution="equalSpacing">
                         <Box >
                             <Text variant="bodyLg" fontWeight="bold">Orders</Text>
-                            <Text variant="bodyMd">200</Text>
+                            <Text variant="bodyMd">{summaryData.orders}</Text>
                         </Box>
                         <Box borderInlineStartWidth={'025'} borderColor="border-subused" paddingInlineStart={'600'}>
                             <Text variant="bodyLg" fontWeight="bold">Paid Orders</Text>
-                            <Text variant="bodyMd">100</Text>
+                            <Text variant="bodyMd">{summaryData.paid_orders}</Text>
                         </Box>
                         <Box borderInlineStartWidth={'025'} borderColor="border-subused" paddingInlineStart={'500'}>
                             <Text variant="bodyLg" fontWeight="bold">Paid Amounts</Text>
-                            <Text variant="bodyMd">6,600 USD</Text>
+                            <Text variant="bodyMd">{summaryData.paid_amount}</Text>
                         </Box>
                         <Box borderInlineStartWidth={'025'} borderColor="border-subused" paddingInlineStart={'500'}>
                             <Text variant="bodyLg" fontWeight="bold">Due Amounts</Text>
-                            <Text variant="bodyMd">5,000 USD</Text>
+                            <Text variant="bodyMd">{summaryData.due_amount}</Text>
                         </Box>
                     </LegacyStack>
                 </Card>

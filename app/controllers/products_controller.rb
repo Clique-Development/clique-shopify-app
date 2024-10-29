@@ -70,6 +70,18 @@ class ProductsController < ApplicationController
     render json: summary_data
   end
 
+  def orders_data_summary
+    paid_and_due_amount = Order.paid_and_due_amounts
+    summary_data = {
+      orders: Order.count,
+      paid_orders: Order.paid.count,
+      paid_amount: paid_and_due_amount[0],
+      due_amount: paid_and_due_amount[1],
+    }
+
+    render json: summary_data
+  end
+
   def sync_products
     rewix_service = RewixApiService.new('272000ec-9039-4c4e-a874-6dd5ea741b31', 'Cliqueadmin1')
     fetched_products = rewix_service.fetch_products
