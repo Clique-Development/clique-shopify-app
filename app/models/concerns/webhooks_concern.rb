@@ -5,7 +5,7 @@ module WebhooksConcern
 
     WEBHOOKS = ['app/uninstalled', 'customers/create', 'customers/delete', 'customers/update', 'inventory_levels/update',
                 'orders/cancelled', 'orders/create', 'orders/updated', 'products/create', 'products/delete',
-                'products/update', 'shop/update', 'carts/create'
+                'products/update', 'shop/update', 'carts/create', 'carts/update'
     ]
 
     def create_webhooks
