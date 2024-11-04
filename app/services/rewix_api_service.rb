@@ -24,4 +24,14 @@ class RewixApiService
       raise "Failed to fetch products: #{response.message}"
     end
   end
+
+  def lock_quantity(data)
+    headers = @headers.merge('Content-Type' => 'application/json')
+    response = self.class.post('https://griffati.rewix.zero11.org/restful/ghost/orders/sold', headers: headers, body: data.to_json)
+    if response.success?
+      response.body
+    else
+      raise "Failed to create order: #{response}"
+    end
+  end
 end
