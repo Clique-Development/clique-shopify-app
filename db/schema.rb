@@ -10,7 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_11_04_112609) do
+ActiveRecord::Schema[7.0].define(version: 2024_11_06_111213) do
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "plpgsql"
+
   create_table "addresses", force: :cascade do |t|
     t.bigint "shopify_addr_id"
     t.bigint "shopify_customer_id"
@@ -32,7 +35,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_11_04_112609) do
     t.decimal "latitude", precision: 10, scale: 7
     t.decimal "longitude", precision: 10, scale: 7
     t.boolean "is_deleted", default: false
-    t.integer "order_id"
+    t.bigint "order_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["order_id"], name: "index_addresses_on_order_id"
@@ -43,7 +46,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_11_04_112609) do
     t.integer "quantity"
     t.string "sku"
     t.bigint "variant_id"
-    t.integer "cart_id"
+    t.bigint "cart_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["cart_id"], name: "index_cart_items_on_cart_id"
@@ -78,7 +81,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_11_04_112609) do
     t.datetime "shopify_updated_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "shop_id"
+    t.bigint "shop_id"
     t.index ["shop_id"], name: "index_customers_on_shop_id"
   end
 
@@ -97,7 +100,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_11_04_112609) do
     t.string "variant_title"
     t.string "vendor"
     t.boolean "requires_shipping"
-    t.integer "order_id"
+    t.bigint "order_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "product_id"
@@ -106,7 +109,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_11_04_112609) do
   end
 
   create_table "orders", force: :cascade do |t|
-    t.integer "shopify_order_id"
+    t.bigint "shopify_order_id"
     t.integer "order_number"
     t.string "name"
     t.string "email"
@@ -132,12 +135,14 @@ ActiveRecord::Schema[7.0].define(version: 2024_11_04_112609) do
     t.boolean "is_deleted", default: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "shop_id"
-    t.integer "customer_id"
+    t.bigint "shop_id"
+    t.bigint "customer_id"
     t.string "financial_status"
     t.float "cost_of_dropshipping"
+    t.bigint "rewix_id"
     t.index ["customer_id"], name: "index_orders_on_customer_id"
     t.index ["shop_id"], name: "index_orders_on_shop_id"
+    t.index ["shopify_order_id"], name: "index_orders_on_shopify_order_id", unique: true
   end
 
   create_table "price_settings", force: :cascade do |t|
@@ -175,7 +180,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_11_04_112609) do
     t.decimal "final_price"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "shop_id"
+    t.bigint "shop_id"
     t.index ["shop_id"], name: "index_products_on_shop_id"
   end
 
@@ -212,7 +217,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_11_04_112609) do
     t.string "admin_graphql_api_id"
     t.datetime "shopify_created_at"
     t.datetime "shopify_updated_at"
-    t.integer "product_id"
+    t.bigint "product_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "stock_id"

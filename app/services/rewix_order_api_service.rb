@@ -28,8 +28,10 @@ class RewixOrderApiService
 
     if response.success?
       puts "Order created successfully: #{response.body}"
+      response['root']['order_id']
     else
       raise "Failed to create order: #{response.message}"
+      nil
     end
   end
 
@@ -41,40 +43,46 @@ class RewixOrderApiService
     xml.instruct! :xml, :encoding => 'UTF-8', :standalone => 'yes'
     xml.root do
       xml.order_list do
-        xml.order do
-          xml.key order_data[:key]
-          xml.date order_data[:date]
-          xml.carrierId order_data[:carrierId] if order_data[:carrierId].present?
+        order_data[:order_list].each do |order|
+          xml.order do
+            xml.key order[:key]
+            xml.date order[:date]
+            xml.carrierId order[:carrierId]
 
-          xml.recipient_details do
-            xml.recipient order_data[:recipient]
-            xml.careof order_data[:careof]
-            xml.cfpiva order_data[:cfpiva]
-            xml.customer_key order_data[:customer_key]
-            xml.notes order_data[:notes]
-            xml.address do
-              xml.street_type order_data[:street_type]
-              xml.street_name order_data[:street_name]
-              xml.address_number order_data[:address_number]
-              xml.zip order_data[:zip]
-              xml.city order_data[:city]
-              xml.province order_data[:province]
-              xml.countrycode order_data[:countrycode]
+            xml.recipient_details do
+              xml.recipient order[:recipient_details][:recipient]
+              xml.cfpiva order[:recipient_details][:cfpiva]
+              xml.customer_key order[:recipient_details][:customer_key]
+              xml.careof
+              xml.notes
+
+              xml.address do
+                xml.street_type order[:recipient_details][:address][:street_type]
+                xml.street_name order[:recipient_details][:address][:street_name]
+                xml.address_number order[:recipient_details][:address][:address_number]
+                xml.zip order[:recipient_details][:address][:zip]
+                xml.city order[:recipient_details][:address][:city]
+                xml.province order[:recipient_details][:address][:province]
+                xml.countrycode order[:recipient_details][:address][:countrycode]
+              end
+
+              xml.phone do
+                xml.prefix order[:recipient_details][:phone][:prefix]
+                xml.number order[:recipient_details][:phone][:number]
+              end
             end
-            xml.phone do
-              xml.prefix order_data[:prefix]
-              xml.number order_data[:number]
+
+            xml.item_list do
+              order[:item_list].each do |item|
+                xml.item do
+                  xml.stock_id item[:stock_id]
+                  xml.quantity item[:quantity]
+                end
+              end
             end
+
+            xml.autoConfirm order[:autoConfirm]
           end
-
-          xml.item_list do
-            xml.item do
-              xml.stock_id order_data[:stock_id]
-              xml.quantity order_data[:quantity]
-            end
-          end
-
-          xml.autoConfirm order_data[:autoConfirm] ? 'true' : 'false'
         end
       end
     end

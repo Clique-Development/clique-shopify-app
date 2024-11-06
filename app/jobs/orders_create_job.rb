@@ -150,31 +150,41 @@ class OrdersCreateJob < ActiveJob::Base
   end
 
   def send_order_to_rewix(order, address)
-    order.line_items.each do |line_item|
-      rewix_order_data = {
-        key: order.shopify_order_id,
-        date: order.shopify_created_at.strftime("%Y/%m/%d %H:%M:%S %z"),
-        recipient: address.name,
-        careof: "",
-        street_name: address.address1,
-        address_number: address.address2,
-        zip: address.zip,
-        city: address.city,
-        province: address.province,
-        countrycode: address.country_code,
-        prefix: "",
-        number: address.phone,
-        stock_id: line_item.sku,
-        quantity: 1,
-        autoConfirm: true
-      }
-      rewix_service = RewixOrderApiService.new('272000ec-9039-4c4e-a874-6dd5ea741b31', 'Cliqueadmin1')
-
-      begin
-        rewix_service.create_dropshipping_order(rewix_order_data)
-      rescue => e
-        logger.error(e.message)
-      end
+    rewix_order_data = {
+      "order_list": [
+        {
+          "key": order.shopify_order_id,
+          "date": order.shopify_created_at.strftime("%Y/%m/%d %H:%M:%S %z"),
+          "carrierId": "20",
+          "recipient_details": {
+            "recipient": address.name,
+            "cfpiva": "12345558",
+            "customer_key": order.customer&.shopify_customer_id,
+            "address": {
+              "street_type": "0",
+              "street_name": address.address1,
+              "address_number": address.address2,
+              "zip": address.zip,
+              "city": address.city,
+              "province": address.province,
+              "countrycode": address.country_code
+            },
+            "phone": {
+              "prefix": "",
+              "number": address.phone
+            }
+          },
+          "item_list": order.line_items.map { |item| { "stock_id": item.sku, "quantity": item.quantity } },
+          "autoConfirm": "true"
+        }
+      ]
+    }
+    rewix_service = RewixOrderApiService.new('272000ec-9039-4c4e-a874-6dd5ea741b31', 'Cliqueadmin1')
+    begin
+      rewix_id = rewix_service.create_dropshipping_order(rewix_order_data)
+      order.update(rewix_id: rewix_id)
+    rescue => e
+      logger.error(e.message)
     end
   end
 
