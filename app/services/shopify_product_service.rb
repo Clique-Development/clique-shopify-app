@@ -16,11 +16,6 @@ class ShopifyProductService
 
     add_product_media(product_id_info[:product_id], media_params)
 
-    # add_variants(product_id_info[:product_id], variant_params) if variant_params.any?
-
-    # Step 4: Update inventory levels
-    # update_product_quantity(product_id_info, inventory_params)
-
     product_id_info[:product_id]
   end
 
@@ -51,39 +46,38 @@ class ShopifyProductService
   # Create the product
   def create_product(product_params, variant_params, product)
     query = <<~GRAPHQL
-      mutation CreateProductWithOptions($input: ProductInput!) {
-        productCreate(input: $input) {
-          product {
+    mutation CreateProductWithOptions($input: ProductInput!) {
+      productCreate(input: $input) {
+        product {
+          id
+          title
+          bodyHtml
+          vendor
+          productType
+          options {
+            name
+            values
             id
-            title
-            bodyHtml
-            vendor
-            productType
-            options {
-              name
-              values
+            position
+          }
+          variants(first: 5) {
+            nodes {
               id
-              position
-            }
-            variants(first: 5) {
-              nodes {
-                id
-                title
-                selectedOptions {
-                  name
-                  value
-                }
-                price
-                sku
-                weight
-                weightUnit
+              title
+              selectedOptions {
+                name
+                value
               }
+              price
+              sku
+              weight
+              weightUnit
             }
           }
-          userErrors {
-            message
-            field
-          }
+        }
+        userErrors {
+          message
+          field
         }
       }
     GRAPHQL
@@ -101,8 +95,6 @@ class ShopifyProductService
       }
     end
 
-     
-
     variables = {
       "input": {
         "title": product_params[:title],
@@ -114,11 +106,10 @@ class ShopifyProductService
       }
     }
 
-     
-
     response = @client.query(query: query, variables: variables)
 
-    if response.body["data"]["productCreate"]["userErrors"].empty?
+    user_errors = response.body["data"]["productCreate"]["userErrors"]
+    if user_errors.empty?
       product_data = response.body["data"]["productCreate"]["product"]
 
       variants_data = response.body.dig('data', 'productCreate', 'product', 'variants', 'nodes')
@@ -139,9 +130,14 @@ class ShopifyProductService
 
       { product_id: product_data['id'] }
     else
-      puts "Error creating product: #{response.body["data"]["productCreate"]["userErrors"]}"
+      user_errors.each do |error|
+        puts "Error creating product: #{error['message']} (Field: #{error['field']})"
+      end
       nil
     end
+  rescue => e
+    puts "An unexpected error occurred while creating the product: #{e.message}"
+    nil
   end
 
   def add_product_media(product_id, media_params)
@@ -175,34 +171,6 @@ class ShopifyProductService
     end
   end
 
-  # Add inventory levels for each variant
-  # def update_product_quantity(product_id_info, inventory_params)
-  #   inventory_items = product_id_info[:variant_inventory_items]
-  #   location_id = inventory_params[:location_id]
-  #   quantities = inventory_params[:quantities]
-  #
-  #   inventory_items.each_with_index do |inventory_item_id, index|
-  #     # Use ShopifyAPI::InventoryLevel to adjust inventory
-  #     session = @session  # The session has already been created in initialize
-  #
-  #     inventory_level = ShopifyAPI::InventoryLevel.new(session: session)
-  #
-  #     begin
-  #       response = inventory_level.adjust(
-  #         session: session,
-  #         body: {
-  #           "location_id" => location_id.split('/').last,
-  #           "inventory_item_id" => inventory_item_id.split('/').last,
-  #           "available_adjustment" => quantities[index].to_i
-  #         }
-  #       )
-  #
-  #       puts "Inventory for variant #{inventory_item_id} updated successfully to #{quantities[index]}."
-  #     rescue => e
-  #       puts "Error adjusting inventory for variant #{inventory_item_id}: #{e.message}"
-  #     end
-  #   end
-  # end
   def add_variants(product_id, variant_params)
     query = <<~QUERY
       mutation productVariantCreate($input: ProductVariantInput!) {
@@ -233,20 +201,6 @@ class ShopifyProductService
           inventory_item_id = response.body["data"]["productVariantCreate"]["productVariant"]["inventoryItem"]["id"]
 
           puts "Variant #{variant[:title]} created successfully with ID: #{shopify_variant_id}"
-
-          # save_variant_to_db(
-          #   product_id: product_id,
-          #   shopify_variant_id: shopify_variant_id,
-          #   title: variant[:title],
-          #   sku: variant[:sku],
-          #   price: variant[:price],
-          #   barcode: variant[:barcode],
-          #   weight: variant[:weight],
-          #   weight_unit: variant[:weightUnit],
-          #   inventory_quantity: variant[:inventoryQuantity],
-          #   inventory_item_id: inventory_item_id,
-          #   stock_id: variant[:stock_id]
-          # )
 
         else
           puts "Error creating variant: #{response.body['data']['productVariantCreate']['userErrors']}"

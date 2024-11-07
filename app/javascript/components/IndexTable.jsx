@@ -58,30 +58,21 @@ function IndexTableComponent() {
             destination: ordersUrl,
         });
 
-        const customersLink = AppLink.create(app, {
-            label: 'Customers',
-            destination: '/customers',
-        });
-
         const settingsLink = AppLink.create(app, {
             label: 'Settings',
             destination: settingsUrl,
         });
 
-        // Set up the navigation menu
         NavigationMenu.create(app, {
-            items: [productsLink, ordersLink, customersLink, settingsLink],
+            items: [productsLink, ordersLink, settingsLink],
             active: location.pathname.includes("")
                 ? productsLink
                 : location.pathname.includes("orders")
                     ? ordersLink
-                    : location.pathname.includes("customers")
-                        ? customersLink
-                        : settingsLink,
+                    : settingsLink,
         });
     }, [location]);
 
-    //  real-time data fetching
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -90,7 +81,7 @@ function IndexTableComponent() {
 
                 setSummaryData({
                     suppliers: data.suppliers,
-                    vendors: data.brands, // Renamed to match the backend
+                    vendors: data.brands,
                     inventory: data.inventory,
                     warehouseLocations: data.warehouse_locations,
                     potentialRevenue: data.potential_revenue,
@@ -373,6 +364,7 @@ function IndexTableComponent() {
                 cost_of_kg,
                 cost_of_gram,
                 unit_weight_gr,
+                actual_weight,
                 unit_cost_including_weight_usd,
                 unit_cost_including_weight_egp,
                 gross_margin,
@@ -409,6 +401,7 @@ function IndexTableComponent() {
                     <IndexTable.Cell>{`${cost_of_kg} USD`}</IndexTable.Cell>
                     <IndexTable.Cell>{`${cost_of_gram} USD`}</IndexTable.Cell>
                     <IndexTable.Cell>{`${unit_weight_gr} gm`}</IndexTable.Cell>
+                    <IndexTable.Cell>{`${actual_weight} gm`}</IndexTable.Cell>
                     <IndexTable.Cell>{`${unit_cost_including_weight_usd} USD`}</IndexTable.Cell>
                     <IndexTable.Cell>{`${unit_cost_including_weight_egp} EGP`}</IndexTable.Cell>
                     <IndexTable.Cell>{`${gross_margin} %`}</IndexTable.Cell>
@@ -527,6 +520,7 @@ function IndexTableComponent() {
                         { title: 'Cost of Kg (USD)' },
                         { title: 'Cost of Gram (USD )' },
                         { title: 'Unit WeightSupplier (GR)' },
+                        { title: 'Actual Weight (GR)' },
                         { title: 'Unit Cost Including Weight (USD)' },
                         { title: 'Unit Cost Including Weight (EGP)' },
                         { title: 'Gross Margin' },

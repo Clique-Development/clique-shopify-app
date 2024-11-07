@@ -88,7 +88,7 @@ class ProductsController < ApplicationController
     if fetched_products.present?
       parsed_products = JSON.parse(fetched_products)["pageItems"]
 
-      parsed_products.take(1).each do |product_data|
+      parsed_products.each do |product_data|
 
         category_tag = product_data["tags"].find { |tag| tag["name"] == "category" }
         brand_tag = product_data["tags"].find { |tag| tag["name"] == "brand" }
@@ -96,7 +96,7 @@ class ProductsController < ApplicationController
         cost_of_dropship_carrier_eur = 9.8
 
         exchange_service = CurrencyExchange.new
-        unit_cost_usd = exchange_service.convert((product_data["taxable"] + cost_of_dropship_carrier_eur), 'EUR', 'USD')
+        unit_cost_usd = exchange_service.convert((product_data["taxable"]), 'EUR', 'USD')
 
         egp_exchange_rate = PriceSetting.last.final_black_market_price.to_f
         unit_cost_egp = unit_cost_usd.to_f * egp_exchange_rate
@@ -105,6 +105,8 @@ class ProductsController < ApplicationController
         unit_cost_including_weight_usd = cost_of_gram * cost_of_kg
         # unit_cost_including_weight_egp = cost_of_kg * egp_exchange_rate
         gross_margin = PriceSetting.last.gross_margin.to_f
+
+        category_weight = CategoryWeight.find_by(subcategory: subcategory_tag&.dig("value", "value")).weight
 
         final_price = (((((unit_cost_usd.to_f + unit_cost_including_weight_usd).round(2)) * egp_exchange_rate).round(2)) * 1.45).round(2)
 
@@ -127,6 +129,7 @@ class ProductsController < ApplicationController
                          cost_of_kg: cost_of_kg,
                          cost_of_gram: cost_of_kg / 1000,
                          unit_weight_gr: product_data["weight"],
+                         actual_weight: category_weight.to_f,
                          unit_cost_including_weight_usd: (unit_cost_usd.to_f + unit_cost_including_weight_usd).round(2),
                          unit_cost_including_weight_egp: (((unit_cost_usd.to_f + unit_cost_including_weight_usd).round(2)) * egp_exchange_rate).round(2),
                          gross_margin: gross_margin,
