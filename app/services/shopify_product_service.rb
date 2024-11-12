@@ -46,38 +46,42 @@ class ShopifyProductService
   # Create the product
   def create_product(product_params, variant_params, product)
     query = <<~GRAPHQL
-    mutation CreateProductWithOptions($input: ProductInput!) {
-      productCreate(input: $input) {
-        product {
-          id
-          title
-          bodyHtml
-          vendor
-          productType
-          options {
-            name
-            values
+      mutation CreateProductWithOptions($input: ProductInput!) {
+        productCreate(input: $input) {
+          product {
             id
-            position
-          }
-          variants(first: 5) {
-            nodes {
+            title
+            bodyHtml
+            vendor
+            productType
+            options {
+              name
+              values
               id
-              title
-              selectedOptions {
-                name
-                value
+              position
+            }
+            variants(first: 5) {
+              nodes {
+                id
+                title
+                selectedOptions {
+                  name
+                  value
+                }
+                price
+                sku
+                weight
+                weightUnit
+                inventoryItem {
+                  id # Needed to adjust inventory
+                }
               }
-              price
-              sku
-              weight
-              weightUnit
             }
           }
-        }
-        userErrors {
-          message
-          field
+          userErrors {
+            message
+            field
+          }
         }
       }
     GRAPHQL
@@ -107,37 +111,152 @@ class ShopifyProductService
     }
 
     response = @client.query(query: query, variables: variables)
+    user_errors = response.body.dig("data", "productCreate", "userErrors")
 
-    user_errors = response.body["data"]["productCreate"]["userErrors"]
-    if user_errors.empty?
-      product_data = response.body["data"]["productCreate"]["product"]
-
-      variants_data = response.body.dig('data', 'productCreate', 'product', 'variants', 'nodes')
-      return nil unless variants_data
-
-      variants_data.each do |variant|
-        save_variant_to_db(
-          product_id: 1,
-          shopify_product_id: product_data['id']&.gsub(/\D/, ''),
-          shopify_variant_id: variant['id']&.gsub(/\D/, ''),
-          title: variant['title'],
-          sku: variant['sku'],
-          price: variant['price'],
-          weight: variant['weight'],
-          weight_unit: variant['weightUnit']
-        )
-      end
-
-      { product_id: product_data['id'] }
-    else
+    if user_errors && user_errors.any?
       user_errors.each do |error|
         puts "Error creating product: #{error['message']} (Field: #{error['field']})"
       end
-      nil
+      return nil
     end
+
+    product_data = response.body.dig("data", "productCreate", "product")
+    variants_data = product_data&.dig("variants", "nodes")
+
+    unless product_data && variants_data
+      puts "Error: Product or variant data is missing in the response."
+      return nil
+    end
+
+    variants_data.each_with_index do |variant, index|
+      save_variant_to_db(
+        product_id: product.id,
+        shopify_product_id: product_data['id']&.gsub(/\D/, ''),
+        shopify_variant_id: variant['id']&.gsub(/\D/, ''),
+        title: variant['title'],
+        sku: variant['sku'],
+        price: variant['price'],
+        weight: variant['weight'],
+        weight_unit: variant['weightUnit']
+      )
+
+      if variant_params[index][:inventoryQuantity]
+        adjust_inventory_quantity(variant['inventoryItem']['id'], variant_params[index][:inventoryQuantity], variant['id'])
+        enable_inventory_tracking(variant['id'])
+      end
+    end
+
+    { product_id: product_data['id'] }
   rescue => e
     puts "An unexpected error occurred while creating the product: #{e.message}"
     nil
+  end
+
+  def fetch_inventory_level_id(inventory_item_id)
+    query = <<~GRAPHQL
+      query($inventoryItemId: ID!) {
+        inventoryItem(id: $inventoryItemId) {
+          inventoryLevels(first: 1) {
+            edges {
+              node {
+                id
+                available
+                location {
+                  id
+                }
+              }
+            }
+          }
+        }
+      }
+    GRAPHQL
+
+    variables = { "inventoryItemId": inventory_item_id }
+    response = @client.query(query: query, variables: variables)
+
+    inventory_level_id = response.body.dig("data", "inventoryItem", "inventoryLevels", "edges", 0, "node", "id")
+    inventory_level_id
+  rescue => e
+    puts "An error occurred while fetching inventory level ID: #{e.message}"
+    nil
+  end
+
+  def enable_inventory_tracking(shopify_variant_id)
+    query = <<~GRAPHQL
+      mutation UpdateVariant($input: ProductVariantInput!) {
+        productVariantUpdate(input: $input) {
+          productVariant {
+            id
+            inventoryManagement
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    GRAPHQL
+
+    variables = {
+      "input": {
+        "id": shopify_variant_id,
+        "inventoryManagement": "SHOPIFY"
+      }
+    }
+
+    response = @client.query(query: query, variables: variables)
+    user_errors = response.body.dig("data", "productVariantUpdate", "userErrors")
+
+    if user_errors && user_errors.any?
+      user_errors.each do |error|
+        puts "Error enabling inventory tracking: #{error['message']} (Field: #{error['field']})"
+      end
+    else
+      puts "Inventory tracking enabled for variant #{shopify_variant_id}."
+    end
+  end
+
+  def adjust_inventory_quantity(inventory_item_id, quantity, shopify_variant_id)
+    inventory_level_id = fetch_inventory_level_id(inventory_item_id)
+    return unless inventory_level_id
+
+    query = <<~GRAPHQL
+      mutation AdjustInventory($inventoryLevelId: ID!, $availableDelta: Int!) {
+        inventoryAdjustQuantity(input: {inventoryLevelId: $inventoryLevelId, availableDelta: $availableDelta}) {
+          inventoryLevel {
+            id
+            available
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    GRAPHQL
+
+    variables = {
+      "inventoryLevelId": inventory_level_id,
+      "availableDelta": quantity
+    }
+
+    response = @client.query(query: query, variables: variables)
+    user_errors = response.body.dig("data", "inventoryAdjustQuantity", "userErrors")
+
+    if user_errors && user_errors.any?
+      user_errors.each do |error|
+        puts "Error adjusting inventory: #{error['message']} (Field: #{error['field']})"
+      end
+    else
+      available_quantity = response.body.dig("data", "inventoryAdjustQuantity", "inventoryLevel", "available")
+      variant_record = Variant.find_by(shopify_variant_id: shopify_variant_id&.gsub(/\D/, ''))
+      if variant_record
+        variant_record.update(inventory_quantity: available_quantity, inventory_item_id: inventory_item_id&.gsub(/\D/, ''))
+        puts "Inventory updated successfully for variant #{shopify_variant_id} to #{available_quantity}."
+      else
+        puts "Error: Variant with Shopify ID #{shopify_variant_id} not found in the database."
+      end
+    end
   end
 
   def add_product_media(product_id, media_params)
@@ -168,47 +287,6 @@ class ShopifyProductService
       puts "Media added successfully"
     else
       puts "Error adding media: #{response.body["data"]["productCreateMedia"]["mediaUserErrors"]}"
-    end
-  end
-
-  def add_variants(product_id, variant_params)
-    query = <<~QUERY
-      mutation productVariantCreate($input: ProductVariantInput!) {
-        productVariantCreate(input: $input) {
-          productVariant {
-            id
-            title
-            inventoryItem {
-              id
-            }
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    QUERY
-
-    variant_params.each do |variant|
-      variables = { "input": variant.merge(productId: product_id) }
-
-      begin
-        response = @client.query(query: query, variables: variables)
-
-        if response.body["data"]["productVariantCreate"]["userErrors"].empty?
-          shopify_variant_id = response.body["data"]["productVariantCreate"]["productVariant"]["id"]
-          inventory_item_id = response.body["data"]["productVariantCreate"]["productVariant"]["inventoryItem"]["id"]
-
-          puts "Variant #{variant[:title]} created successfully with ID: #{shopify_variant_id}"
-
-        else
-          puts "Error creating variant: #{response.body['data']['productVariantCreate']['userErrors']}"
-        end
-
-      rescue => e
-        puts "Exception occurred while creating variant #{variant[:title]}: #{e.message}"
-      end
     end
   end
 

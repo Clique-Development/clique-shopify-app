@@ -103,14 +103,12 @@ class ProductsController < ApplicationController
         cost_of_kg = PriceSetting.last.cost_of_kg.to_f
         cost_of_gram = product_data["weight"] / 1000
         unit_cost_including_weight_usd = cost_of_gram * cost_of_kg
-        # unit_cost_including_weight_egp = cost_of_kg * egp_exchange_rate
         gross_margin = PriceSetting.last.gross_margin.to_f
 
-        category_weight = CategoryWeight.find_by(subcategory: subcategory_tag&.dig("value", "value")).weight
+        category_weight = CategoryWeight.find_by(subcategory: subcategory_tag&.dig("value", "value"))&.weight
 
         final_price = (((((unit_cost_usd.to_f + unit_cost_including_weight_usd).round(2)) * egp_exchange_rate).round(2)) * 1.45).round(2)
 
-        # final_price = unit_cost_including_weight_egp + (unit_cost_including_weight_egp * gross_margin)
         Product.upsert({
                          external_id: product_data["id"],
                          name: product_data["name"],
@@ -139,7 +137,6 @@ class ProductsController < ApplicationController
 
         product = Product.find_by(external_id: product_data["id"])
 
-        #     product = Product.last
         shop = product.shop
         shop_domain = shop.shopify_domain
         access_token = shop.shopify_token
@@ -168,11 +165,6 @@ class ProductsController < ApplicationController
           }
         ]
 
-        inventory_params = {
-          location_id: location_id,
-          quantities: [product.quantity]
-        }
-
         variant_params = product_data["models"].map do |variant_data|
           {
             title: "#{variant_data['model']} - #{variant_data['color']} - #{variant_data['size']}",
@@ -190,13 +182,24 @@ class ProductsController < ApplicationController
           }
         end
 
-        product_id = service.create_product_with_variants_and_inventory(product_params, variant_params, media_params, product)
-        shopify_product_id = product_id.gsub(/\D/, '')
-        product.update(shopify_product_id: shopify_product_id)
+        begin
+          product_id = service.create_product_with_variants_and_inventory(product_params, variant_params, media_params, product)
+
+          if product_id
+            shopify_product_id = product_id.gsub(/\D/, '')
+            product.update(shopify_product_id: shopify_product_id)
+          else
+            raise "Product creation failed: product_id is nil."
+          end
+
+        rescue StandardError => e
+          Rails.logger.error("Failed to create product with variants and inventory: #{e.message}")
+          Rails.logger.error(e.backtrace.join("\n"))
+        end
 
         puts "Product created with ID: #{product_id}" if product_id
-      end
 
+      end
     else
       render json: { error: "Failed to fetch products" }, status: :unprocessable_entity
     end

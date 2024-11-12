@@ -395,7 +395,6 @@ function IndexTableComponent() {
                     <IndexTable.Cell>{subcategory}</IndexTable.Cell>
                     <IndexTable.Cell>{quantity}</IndexTable.Cell>
                     <IndexTable.Cell>{`${unit_cost_eur} EUR`}</IndexTable.Cell>
-                    <IndexTable.Cell>{`${cost_of_dropship_carrier_eur} EUR`}</IndexTable.Cell>
                     <IndexTable.Cell>{`${unit_cost_usd} USD`}</IndexTable.Cell>
                     <IndexTable.Cell>{`${unit_cost_egp} EGP`}</IndexTable.Cell>
                     <IndexTable.Cell>{`${cost_of_kg} USD`}</IndexTable.Cell>
@@ -514,7 +513,6 @@ function IndexTableComponent() {
                         { title: 'Subcategory' },
                         { title: 'Quantity' },
                         { title: 'Unit Cost' },
-                        { title: 'Cost of Dropshipping Carrier (EUR)' },
                         { title: 'Unit Cost (USD)' },
                         { title: 'Unit Cost (EGP)' },
                         { title: 'Cost of Kg (USD)' },
