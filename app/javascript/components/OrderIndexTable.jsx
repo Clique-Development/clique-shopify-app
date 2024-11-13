@@ -367,7 +367,7 @@ function OrderIndexTableComponent() {
                         { title: 'Customer' },
                         { title: 'Cost of Dropshipping Carrier (EUR)' },
                         { title: 'Total' },
-                        { title: 'Payment status' },
+                        { title: 'Order Status (Supplier)' },
                     ]}
                 >
                     {rowMarkup}
