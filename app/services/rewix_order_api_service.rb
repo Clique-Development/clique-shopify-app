@@ -35,6 +35,20 @@ class RewixOrderApiService
     end
   end
 
+  def fetch_order_status(order_id)
+    response = self.class.get(
+      "/ghost/clientorders/serverkey/#{order_id}",
+      headers: @headers,
+    )
+
+    if response.success?
+      puts "Order status fetched successfully: #{response.body}"
+    else
+      raise "Failed to fetch order status: #{response.message}"
+      nil
+    end
+  end
+
   private
 
   # Build the XML for the order
