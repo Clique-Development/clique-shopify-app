@@ -6,7 +6,7 @@ Rails.application.configure do
   # Allow Cloudflare tunnels for secure Shopify OAuth redirects
   config.hosts = (config.hosts rescue []) << /[-\w]+\.trycloudflare\.com/
   # Settings specified here will take precedence over those in config/application.rb.
-  config.hosts << "47e8-182-185-202-22.ngrok-free.app"
+  config.hosts << "0514-39-49-152-101.ngrok-free.app"
   # In the development environment your application's code is reloaded any time
   # it changes. This slows down response time but is perfect for development
   # since you don't have to restart the web server when you make code changes.
@@ -63,7 +63,8 @@ Rails.application.configure do
   # Suppress logger output for asset requests.
   config.assets.quiet = true
 
-  config.hosts << "36b2-119-155-37-239.ngrok-free.app"
+  config.hosts << ENV['HOST_ID']
+
 
 
   # Raises error for missing translations.
