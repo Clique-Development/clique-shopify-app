@@ -1,3 +1,8 @@
-:concurrency: 5
-:queues:
-  - default
+:scheduler:
+  :schedule:
+    SyncProductsDailyJob:
+      cron: "0 0 * * *"
+      class: "SyncProductsDailyJob"
+      queue: default
+      description: "Sync products daily"
+      
