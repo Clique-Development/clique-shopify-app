@@ -1,5 +1,8 @@
 class ShopifyProductService
   def initialize(shop_domain, access_token)
+    @shop_domain = shop_domain
+    @access_token = access_token
+
     @session = ShopifyAPI::Auth::Session.new(
       shop: shop_domain,
       access_token: access_token
@@ -120,6 +123,8 @@ class ShopifyProductService
       return nil
     end
 
+
+    publish_product_to_store(response.body.dig('data', 'productCreate', 'product', 'id'))
     product_data = response.body.dig("data", "productCreate", "product")
     variants_data = product_data&.dig("variants", "nodes")
 
@@ -333,6 +338,32 @@ class ShopifyProductService
       weight: weight,
       weight_unit: weight_unit
     )
+  end
+
+  def publish_product_to_store(product_id)
+    query = <<~QUERY
+      mutation publishablePublish($id: ID!, $input: [PublicationInput!]!) {
+        publishablePublish(id: $id, input: $input) {
+       
+          shop {
+            publicationCount
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    QUERY
+
+    variables = {
+      "id": product_id,
+      "input": {
+        "publicationId": FetchPublicationId.instance.fetch_data(@shop_domain, @access_token)
+      }
+    }
+
+    @client.query(query: query, variables: variables)
   end
 
 end
