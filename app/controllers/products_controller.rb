@@ -85,10 +85,14 @@ class ProductsController < ApplicationController
   def sync_products
     rewix_service = RewixApiService.new('272000ec-9039-4c4e-a874-6dd5ea741b31', 'Cliqueadmin1')
     fetched_products = rewix_service.fetch_products
+
     if fetched_products.present?
+
       parsed_products = JSON.parse(fetched_products)["pageItems"]
 
       parsed_products.each do |product_data|
+
+        next if Product.find_by(external_id: product_data["id"])
 
         category_tag = product_data["tags"].find { |tag| tag["name"] == "category" }
         brand_tag = product_data["tags"].find { |tag| tag["name"] == "brand" }

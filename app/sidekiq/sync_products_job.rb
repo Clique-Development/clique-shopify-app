@@ -2,22 +2,15 @@ class SyncProductsJob
   include Sidekiq::Job
 
   def perform(shop_id)
-    # rewix_service = RewixApiService.new('272000ec-9039-4c4e-a874-6dd5ea741b31', 'Cliqueadmin1')
-    # fetched_products = rewix_service.fetch_products
-
-    file_path = 'products.json'
-    fetched_products = parse_triple_escaped_json(file_path)
+    rewix_service = RewixApiService.new('272000ec-9039-4c4e-a874-6dd5ea741b31', 'Cliqueadmin1')
+    fetched_products = rewix_service.fetch_products
 
     if fetched_products.present?
-      parsed_products = fetched_products["pageItems"]
+      parsed_products = JSON.parse(fetched_products)["pageItems"]
 
       parsed_products.each do |product_data|
 
-        binding.pry
-
         next if Product.find_by(external_id: product_data["id"])
-
-        binding.pry
 
         category_tag = product_data["tags"].find { |tag| tag["name"] == "category" }
         brand_tag = product_data["tags"].find { |tag| tag["name"] == "brand" }
@@ -132,11 +125,5 @@ class SyncProductsJob
     else
       render json: { error: "Failed to fetch products" }, status: :unprocessable_entity
     end
-  end
-
-  def parse_triple_escaped_json(file_path)
-    raw_content = File.read(file_path)
-    decoded_content = JSON.parse(raw_content)
-    JSON.parse(decoded_content)
   end
 end
