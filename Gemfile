@@ -58,7 +58,7 @@ gem "bootsnap", require: false
 
 # Deployment
 gem 'securerandom'
-gem 'net-protocol'
+gem 'net-protocol', '~> 0.2.2'
 gem 'timeout'
 
 
