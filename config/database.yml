@@ -88,6 +88,4 @@ staging:
 
 production:
   <<: *default
-  database: shopify_ai_tools_production
-  username: <%= Rails.application.credentials.USERNAME_PSQL_PRODUCTION %>
-  password:  <%= Rails.application.credentials.PASSWORD_PSQL_PRODUCTION %>
+  database: clique_app_production
