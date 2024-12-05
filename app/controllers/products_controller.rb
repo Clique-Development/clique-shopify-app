@@ -109,9 +109,11 @@ class ProductsController < ApplicationController
         unit_cost_including_weight_usd = cost_of_gram * cost_of_kg
         gross_margin = PriceSetting.last.gross_margin.to_f
 
-        category_weight = CategoryWeight.find_by(subcategory: subcategory_tag&.dig("value", "value"))&.weight
+        gross_margin_multiplier = 1 + (gross_margin / 100)
 
-        final_price = (((((unit_cost_usd.to_f + unit_cost_including_weight_usd).round(2)) * egp_exchange_rate).round(2)) * 1.45).round(2)
+        final_price = (((((unit_cost_usd.to_f + unit_cost_including_weight_usd).round(2)) * egp_exchange_rate).round(2)) * gross_margin_multiplier).round(2)
+
+        category_weight = CategoryWeight.find_by(subcategory: subcategory_tag&.dig("value", "value"))&.weight
 
         Product.upsert({
                          external_id: product_data["id"],
