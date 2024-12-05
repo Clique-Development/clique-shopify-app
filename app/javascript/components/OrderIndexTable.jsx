@@ -374,7 +374,7 @@ function OrderIndexTableComponent() {
                 </IndexTable>
 
                 {/* Pagination controls */}
-                <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ padding:"0 20px 0 0" , display: 'flex', justifyContent: 'flex-end' }}>
                     <button
                         onClick={handlePrevPage}
                         style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
@@ -392,7 +392,7 @@ function OrderIndexTableComponent() {
                     </button>
                 </div>
 
-                <div style={{ marginTop: '10px', textAlign: 'right' }}>
+                <div style={{textAlign: 'right',padding:"0 20px 20px 0" }}>
                     Page {currentPage} of {totalPages}
                 </div>
 

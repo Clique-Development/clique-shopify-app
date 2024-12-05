@@ -86,3 +86,7 @@
     background: transparent;
   }
 }
+
+.Polaris-IndexFilters-Container{
+  border:0 !important;
+}

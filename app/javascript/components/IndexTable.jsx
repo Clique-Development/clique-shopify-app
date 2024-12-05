@@ -306,7 +306,10 @@ function IndexTableComponent() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
-    const { allResourcesSelected, selectedResources, handleSelectionChange } = useIndexResourceState(products);
+    const {selectedResources, allResourcesSelected, handleSelectionChange} =
+        useIndexResourceState(products, {
+            resourceIDResolver: (product) => product.external_id, // Provide a resolver for the resource ID
+        });
 
     const resourceName = {
         singular: "Product",
